@@ -13,7 +13,7 @@ public class DingReceiveMsg {
 
     private String msgtype;
 
-    private String content;
+    private Text text;
 
     private String msgId;
 

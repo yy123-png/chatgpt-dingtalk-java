@@ -1,8 +1,7 @@
-package com.yy.chatgpt.dingtalk.response;
+package com.yy.chatgpt.dingtalk.request;
 
 import com.alibaba.fastjson.JSON;
 import com.yy.chatgpt.common.CommonConstant;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,33 +13,32 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class DingResponseMsg {
+public class DingSendMsg {
 
     private String msgtype;
 
     private Text text;
+
+    private AtText at;
+
 
     @Override
     public String toString() {
         return JSON.toJSONString(this);
     }
 
-    public static DingResponseMsg error() {
+    public static DingSendMsg error() {
         return buildText(CommonConstant.ERROR_RESPONSE_TEXT);
     }
 
-    public static DingResponseMsg buildText(String content) {
-        DingResponseMsg dingResponseMsg = new DingResponseMsg();
-        dingResponseMsg.setMsgtype("text");
+    public static DingSendMsg buildText(String content) {
+        DingSendMsg dingSendMsg = new DingSendMsg();
+        dingSendMsg.setMsgtype("text");
         Text text = new Text();
         text.setContent(content);
-        dingResponseMsg.setText(text);
-        return dingResponseMsg;
+        dingSendMsg.setText(text);
+        return dingSendMsg;
     }
 
-    @Data
-    public static class Text {
-        private String content;
-    }
 
 }

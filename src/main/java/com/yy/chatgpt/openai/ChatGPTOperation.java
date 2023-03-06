@@ -1,14 +1,15 @@
 package com.yy.chatgpt.openai;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.yy.chatgpt.common.CommonConstant;
+import com.yy.chatgpt.common.CustomConfig;
 import com.yy.chatgpt.common.RoleEnum;
 import com.yy.chatgpt.openai.request.ChatMessage;
 import com.yy.chatgpt.openai.request.ChatRequest;
-import com.yy.chatgpt.openai.response.ChatResponse;
+import com.yy.chatgpt.openai.request.ChatResponse;
 import com.yy.chatgpt.user.UserSession;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,20 +22,7 @@ import java.util.List;
 @Slf4j
 public class ChatGPTOperation {
 
-    private String apiKey;
-
-    private Integer maxTokens = 512;
-
-    private String model = "gpt-3.5-turbo";
-
-    private Double temperature = 0.9;
-
-    private String clearSessionToken = "清空会话";
-
-
-    private void loadConfig() {
-
-    }
+    private final CustomConfig customConfig;
 
     private String extractPostResult(String postResult) {
         try {
@@ -51,11 +39,36 @@ public class ChatGPTOperation {
         return null;
     }
 
-    public ChatGPTOperation() {
-        this.loadConfig();
+    public ChatGPTOperation(CustomConfig customConfig) {
+        this.customConfig = customConfig;
+    }
+
+    public RoleEnum getRole(String content) {
+        if (CharSequenceUtil.isBlank(content)) {
+            throw new IllegalArgumentException("请求内容为空");
+        }
+        content = content.trim();
+
+        if (content.startsWith(customConfig.getSystemToken())) {
+            return RoleEnum.SYSTEM;
+        }
+        return RoleEnum.USER;
+    }
+
+    public String removeSystemToken(String content) {
+        return content.replaceFirst(customConfig.getSystemToken(), "");
+    }
+
+    public boolean clearSession(String userId, String content) {
+        if (content.contains(customConfig.getClearToken())) {
+            UserSession.clearSession(userId);
+            return Boolean.TRUE;
+        }
+        return Boolean.FALSE;
     }
 
     public String makeReply(String userId, String content, RoleEnum roleEnum) {
+
         ChatMessage userContent = new ChatMessage();
         userContent.setContent(content);
         userContent.setRole(roleEnum.getCode());
@@ -63,15 +76,15 @@ public class ChatGPTOperation {
         messages.add(userContent);
 
         ChatRequest chatRequest = new ChatRequest();
-        chatRequest.setMax_tokens(maxTokens);
-        chatRequest.setTemperature(temperature);
-        chatRequest.setModel(model);
+        chatRequest.setMax_tokens(customConfig.getMaxTokens());
+        chatRequest.setTemperature(customConfig.getTemperature());
+        chatRequest.setModel(customConfig.getModel());
         chatRequest.setMessages(messages);
 
 
         String postResult = HttpUtil.createPost(CommonConstant.CHAT_API)
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
+                .header("Authorization", "Bearer " + customConfig.getApiKey())
                 .body(JSON.toJSONString(chatRequest))
                 .execute()
                 .body();

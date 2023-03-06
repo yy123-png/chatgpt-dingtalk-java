@@ -1,6 +1,5 @@
-package com.yy.chatgpt.openai.response;
+package com.yy.chatgpt.openai.request;
 
-import com.yy.chatgpt.openai.request.ChatMessage;
 import lombok.Data;
 
 import java.util.List;

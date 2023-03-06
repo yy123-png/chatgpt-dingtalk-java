@@ -1,19 +1,17 @@
 package com.yy.chatgpt.server;
 
 import com.alibaba.fastjson.JSON;
+import com.yy.chatgpt.common.CommonConstant;
 import com.yy.chatgpt.common.RoleEnum;
 import com.yy.chatgpt.dingtalk.DingTalkOperation;
 import com.yy.chatgpt.dingtalk.request.DingReceiveMsg;
-import com.yy.chatgpt.dingtalk.response.DingResponseMsg;
+import com.yy.chatgpt.dingtalk.request.DingSendMsg;
 import com.yy.chatgpt.openai.ChatGPTOperation;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
-import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Objects;
 
 /**
  * @author yeyu
@@ -34,46 +32,78 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<FullHttpRequ
 
 
     private DingReceiveMsg getDingTalkMsg(FullHttpRequest request) {
-        Long timestamp = Long.parseLong(request.headers().get("timestamp"));
-        String checkSign = request.headers().get("sign");
-        boolean isValid = dingTalkOperation.checkMsgValid(timestamp, checkSign);
         ByteBuf content = request.content();
         byte[] buf = new byte[content.readableBytes()];
         content.readBytes(buf);
         String msg = new String(buf);
-        DingReceiveMsg dingReceiveMsg = JSON.parseObject(msg, DingReceiveMsg.class);
-        if (!isValid) {
-            dingTalkOperation.sendResponse(DingResponseMsg.error().toString(), dingReceiveMsg.getSessionWebhook());
-            return null;
-        }
-        return dingReceiveMsg;
+        return JSON.parseObject(msg, DingReceiveMsg.class);
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
 
-        String content = String.format("Received http request, uri: %s, method: %s, content: %s%n",
-                msg.uri(), msg.method(), msg.content().toString(CharsetUtil.UTF_8));
-        log.info(content);
+        boolean hasError = Boolean.FALSE;
 
-        DingReceiveMsg dingReceiveMsg = this.getDingTalkMsg(msg);
-        if (!Objects.isNull(dingReceiveMsg)) {
-            dingTalkOperation.sendResponse(DingResponseMsg.buildText("gptstring").toString(), dingReceiveMsg.getSessionWebhook());
+        if (msg.headers().isEmpty() || msg.content().readableBytes() == 0) {
+            log.warn("请求为空,不进行处理");
+            DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            HttpHeaders headers = httpResponse.headers();
+            headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            ctx.writeAndFlush(httpResponse);
+            return;
         }
 
-        DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                HttpResponseStatus.OK);
-        HttpHeaders headers = httpResponse.headers();
-        headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-        headers.add(HttpHeaderNames.CONTENT_LENGTH, httpResponse.content().readableBytes());
-        headers.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        DingReceiveMsg dingReceiveMsg = this.getDingTalkMsg(msg);
+        try {
+            // 校验消息是否合法
+            Long timestamp = Long.parseLong(msg.headers().get("timestamp"));
+            String checkSign = msg.headers().get("sign");
+            dingTalkOperation.checkMsgValid(timestamp, checkSign);
 
-        ctx.writeAndFlush(httpResponse);
+            String content = dingReceiveMsg.getText().getContent();
+            // 是否清空会话
+            if (chatGPTOperation.clearSession(dingReceiveMsg.getSenderStaffId(), content)) {
+                dingTalkOperation.sendResponse(CommonConstant.CLEAR_SESSION_TEXT, dingReceiveMsg.getSessionWebhook());
+                return;
+            }
+            // 获取对话角色
+            RoleEnum role = chatGPTOperation.getRole(content);
+            if (RoleEnum.SYSTEM.equals(role)) {
+                content = chatGPTOperation.removeSystemToken(content);
+            }
+            // 获取OpenAI响应内容
+            String reply = chatGPTOperation.makeReply(dingReceiveMsg.getSenderStaffId(), content, role);
+            // 设置at人
+            DingSendMsg dingSendMsg = DingSendMsg.buildText(reply);
+            dingTalkOperation.setAtUser(dingSendMsg, dingReceiveMsg.getSenderStaffId());
+            dingTalkOperation.sendResponse(dingSendMsg.toString(), dingReceiveMsg.getSessionWebhook());
+
+        } catch (Exception e) {
+            log.error("处理请求发生异常", e);
+            hasError = Boolean.TRUE;
+            dingTalkOperation.sendResponse(DingSendMsg.error().toString(), dingReceiveMsg.getSessionWebhook());
+            throw e;
+        } finally {
+            DefaultFullHttpResponse httpResponse;
+            if (hasError) {
+                // 响应错误请求 并发送钉钉错误信息
+                httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
+                HttpHeaders headers = httpResponse.headers();
+                headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+                ctx.writeAndFlush(httpResponse);
+            } else {
+                // 响应Http请求
+                httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+                HttpHeaders headers = httpResponse.headers();
+                headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+                ctx.writeAndFlush(httpResponse);
+            }
+        }
+
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error(cause.getMessage());
         ctx.close();
     }
 }

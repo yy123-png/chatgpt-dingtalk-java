@@ -1,6 +1,8 @@
 package com.yy.chatgpt.server;
 
+import com.yy.chatgpt.common.CustomConfig;
 import com.yy.chatgpt.dingtalk.DingTalkOperation;
+import com.yy.chatgpt.openai.ChatGPTOperation;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -13,11 +15,13 @@ import io.netty.handler.codec.http.*;
 public class HttpServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
+        CustomConfig customConfig = new CustomConfig();
+
         ChannelPipeline pipeline = ch.pipeline();
-        pipeline.addLast(new HttpServerCodec())
+        pipeline.addLast("httpCodec", new HttpServerCodec())
                 .addLast("httpAggregator", new HttpObjectAggregator(2 * 1024 * 1024))
                 .addLast("compressor", new HttpContentCompressor())
-                .addLast(new HttpRequestHandler(new DingTalkOperation("5wPMPutS4nJu0uiQpqKp46a-TZlQ5jaYw8cV0_mwOGBqVRF9YGf-OTSME5gdI1t7")));
+                .addLast("chatHandler", new HttpRequestHandler(new DingTalkOperation(customConfig), new ChatGPTOperation(customConfig)));
 
     }
 }

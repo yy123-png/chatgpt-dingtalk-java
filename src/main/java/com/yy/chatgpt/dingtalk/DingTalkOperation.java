@@ -1,10 +1,10 @@
 package com.yy.chatgpt.dingtalk;
 
 import cn.hutool.core.codec.Base64;
-import cn.hutool.http.Header;
-import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
-import com.yy.chatgpt.common.CommonConstant;
+import com.yy.chatgpt.common.CustomConfig;
+import com.yy.chatgpt.dingtalk.request.AtText;
+import com.yy.chatgpt.dingtalk.request.DingSendMsg;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,6 +13,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 /**
  * @author yeyu
@@ -22,27 +23,26 @@ import java.security.NoSuchAlgorithmException;
 @Slf4j
 public class DingTalkOperation {
 
-    private final String appSecret;
 
-    public DingTalkOperation(String appSecret) {
-        this.appSecret = appSecret;
+    private final CustomConfig customConfig;
+
+    public DingTalkOperation(CustomConfig customConfig) {
+        this.customConfig = customConfig;
     }
 
-    public boolean checkMsgValid(Long timestamp, String checkSign) {
+    public void checkMsgValid(Long timestamp, String checkSign) {
         try {
-            String stringToSign = timestamp + "\n" + appSecret;
+            String stringToSign = timestamp + "\n" + customConfig.getAppSecret();
             Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(appSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            mac.init(new SecretKeySpec(customConfig.getAppSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             byte[] signData = mac.doFinal(stringToSign.getBytes(StandardCharsets.UTF_8));
             String mySign = Base64.encode(signData);
-            if (mySign.equals(checkSign)) {
-                return Boolean.TRUE;
+            if (!mySign.equals(checkSign)) {
+                throw new IllegalStateException("消息不合法");
             }
-            log.warn("消息不合法!");
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            log.error("验证消息异常", e);
+            throw new RuntimeException("验证消息异常", e);
         }
-        return Boolean.FALSE;
     }
 
     public void sendResponse(String msg, String webHook) {
@@ -54,6 +54,14 @@ public class DingTalkOperation {
                 .execute()
                 .body();
         log.info("post result:{}", postResult);
+    }
+
+
+    public DingSendMsg setAtUser(DingSendMsg dingSendMsg, String senderId) {
+        AtText at = new AtText();
+        at.setAtUserIds(Arrays.asList(senderId));
+        dingSendMsg.setAt(at);
+        return dingSendMsg;
     }
 
 }
