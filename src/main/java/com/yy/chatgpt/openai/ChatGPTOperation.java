@@ -29,14 +29,13 @@ public class ChatGPTOperation {
             ChatResponse chatResponse = JSON.parseObject(postResult, ChatResponse.class);
             List<ChatResponse.Choice> choices = chatResponse.getChoices();
             if (CollUtil.isEmpty(choices)) {
-                log.error("ChatGPT请求成功,响应内容为空");
-                return null;
+                throw new IllegalStateException("ChatGPT响应成功,请求结果为空");
             }
             return choices.get(0).getMessage().getContent();
         } catch (Exception e) {
             log.error("解析ChatGPT结果异常:{}", postResult);
+            throw e;
         }
-        return null;
     }
 
     public ChatGPTOperation(CustomConfig customConfig) {
@@ -91,10 +90,9 @@ public class ChatGPTOperation {
 
         String reply = this.extractPostResult(postResult);
         ChatMessage aiContent = new ChatMessage();
-        aiContent.setContent(reply);
+        aiContent.setContent(reply.trim());
         aiContent.setRole(RoleEnum.ASSISTANT.getCode());
 
-        UserSession.putMessage(userId, userContent);
         UserSession.putMessage(userId, aiContent);
 
         return reply;

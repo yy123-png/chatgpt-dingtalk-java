@@ -63,7 +63,7 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<FullHttpRequ
             String content = dingReceiveMsg.getText().getContent();
             // 是否清空会话
             if (chatGPTOperation.clearSession(dingReceiveMsg.getSenderStaffId(), content)) {
-                dingTalkOperation.sendResponse(CommonConstant.CLEAR_SESSION_TEXT, dingReceiveMsg.getSessionWebhook());
+                dingTalkOperation.sendResponse(DingSendMsg.buildText(CommonConstant.CLEAR_SESSION_TEXT).toString(), dingReceiveMsg.getSessionWebhook());
                 return;
             }
             // 获取对话角色
