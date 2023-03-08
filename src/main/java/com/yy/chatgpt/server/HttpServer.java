@@ -4,16 +4,11 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
-
-import java.io.IOException;
 
 /**
  * @author yeyu
@@ -30,13 +25,8 @@ public class HttpServer {
 
     public HttpServer(int port) {
         this.port = port;
-        if (Epoll.isAvailable()) {
-            bossGroup = new EpollEventLoopGroup();
-            workGroup = new EpollEventLoopGroup();
-        } else {
-            bossGroup = new NioEventLoopGroup();
-            workGroup = new NioEventLoopGroup();
-        }
+        bossGroup = new NioEventLoopGroup();
+        workGroup = new NioEventLoopGroup();
     }
 
 

@@ -9,7 +9,7 @@ import com.yy.chatgpt.server.HttpServer;
 public class Start {
     public static void main(String[] args) {
 
-        HttpServer httpServer = new HttpServer(8090);
+        HttpServer httpServer = new HttpServer(8092);
         httpServer.start();
     }
 }
