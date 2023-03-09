@@ -82,6 +82,7 @@ public class ChatGPTOperation {
 
 
         String postResult = HttpUtil.createPost(CommonConstant.CHAT_API)
+                .setHttpProxy("127.0.0.1",7890)
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + customConfig.getApiKey())
                 .body(JSON.toJSONString(chatRequest))
