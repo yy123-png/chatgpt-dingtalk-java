@@ -5,12 +5,11 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.yy.chatgpt.common.CommonConstant;
-import com.yy.chatgpt.common.CustomConfig;
 import com.yy.chatgpt.common.RoleEnum;
 import com.yy.chatgpt.openai.request.ChatMessage;
 import com.yy.chatgpt.openai.request.ChatRequest;
 import com.yy.chatgpt.openai.request.ChatResponse;
-import com.yy.chatgpt.user.UserSession;
+import com.yy.chatgpt.user.UserContext;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -22,7 +21,12 @@ import java.util.List;
 @Slf4j
 public class ChatGPTOperation {
 
-    private final CustomConfig customConfig;
+    private final UserContext userContext;
+
+    public ChatGPTOperation(UserContext userContext) {
+        this.userContext = userContext;
+    }
+
 
     private String extractPostResult(String postResult) {
         try {
@@ -38,9 +42,6 @@ public class ChatGPTOperation {
         }
     }
 
-    public ChatGPTOperation(CustomConfig customConfig) {
-        this.customConfig = customConfig;
-    }
 
     public RoleEnum getRole(String content) {
         if (CharSequenceUtil.isBlank(content)) {
@@ -48,19 +49,19 @@ public class ChatGPTOperation {
         }
         content = content.trim();
 
-        if (content.startsWith(customConfig.getSystemToken())) {
+        if (content.startsWith(userContext.getCustomConfig().getSystemToken())) {
             return RoleEnum.SYSTEM;
         }
         return RoleEnum.USER;
     }
 
     public String removeSystemToken(String content) {
-        return content.replaceFirst(customConfig.getSystemToken(), "");
+        return content.replaceFirst(userContext.getCustomConfig().getSystemToken(), "");
     }
 
     public boolean clearSession(String userId, String content) {
-        if (content.contains(customConfig.getClearToken())) {
-            UserSession.clearSession(userId);
+        if (content.contains(userContext.getCustomConfig().getClearToken())) {
+            userContext.getUserCache().clearSession(userId);
             return Boolean.TRUE;
         }
         return Boolean.FALSE;
@@ -71,20 +72,21 @@ public class ChatGPTOperation {
         ChatMessage userContent = new ChatMessage();
         userContent.setContent(content);
         userContent.setRole(roleEnum.getCode());
-        List<ChatMessage> messages = UserSession.getMessages(userId);
+        List<ChatMessage> messages = userContext.getUserCache().getMessages(userId);
         messages.add(userContent);
 
         ChatRequest chatRequest = new ChatRequest();
-        chatRequest.setMax_tokens(customConfig.getMaxTokens());
-        chatRequest.setTemperature(customConfig.getTemperature());
-        chatRequest.setModel(customConfig.getModel());
+        chatRequest.setMax_tokens(userContext.getCustomConfig().getMaxTokens());
+        chatRequest.setTemperature(userContext.getCustomConfig().getTemperature());
+        chatRequest.setModel(userContext.getCustomConfig().getModel());
         chatRequest.setMessages(messages);
 
 
         String postResult = HttpUtil.createPost(CommonConstant.CHAT_API)
-                .setHttpProxy("127.0.0.1",7890)
+                .timeout(60 * 1000)
+                .setHttpProxy("127.0.0.1", 7890)
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + customConfig.getApiKey())
+                .header("Authorization", "Bearer " + userContext.getCustomConfig().getApiKey())
                 .body(JSON.toJSONString(chatRequest))
                 .execute()
                 .body();
@@ -94,7 +96,7 @@ public class ChatGPTOperation {
         aiContent.setContent(reply.trim());
         aiContent.setRole(RoleEnum.ASSISTANT.getCode());
 
-        UserSession.putMessage(userId, aiContent);
+        userContext.getUserCache().putMessage(userId, aiContent);
 
         return reply;
     }

@@ -1,0 +1,12 @@
+{
+  "apiKey": "",
+  "maxTokens": 2048,
+  "model": "gpt-3.5-turbo",
+  "temperature": 0.7,
+  "clearToken": "清空会话",
+  "systemToken": "设定角色：",
+  "appSecret": "",
+  "sessionTimeOut": 60,
+  "httpProxyHost": "127.0.0.1",
+  "httpProxyPort": 7890
+}

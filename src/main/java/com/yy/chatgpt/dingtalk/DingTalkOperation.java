@@ -2,9 +2,9 @@ package com.yy.chatgpt.dingtalk;
 
 import cn.hutool.core.codec.Base64;
 import cn.hutool.http.HttpUtil;
-import com.yy.chatgpt.common.CustomConfig;
 import com.yy.chatgpt.dingtalk.request.AtText;
 import com.yy.chatgpt.dingtalk.request.DingSendMsg;
+import com.yy.chatgpt.user.UserContext;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,17 +24,17 @@ import java.util.Arrays;
 public class DingTalkOperation {
 
 
-    private final CustomConfig customConfig;
+    private final UserContext userContext;
 
-    public DingTalkOperation(CustomConfig customConfig) {
-        this.customConfig = customConfig;
+    public DingTalkOperation(UserContext userContext) {
+        this.userContext = userContext;
     }
 
     public void checkMsgValid(Long timestamp, String checkSign) {
         try {
-            String stringToSign = timestamp + "\n" + customConfig.getAppSecret();
+            String stringToSign = timestamp + "\n" + userContext.getCustomConfig().getAppSecret();
             Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(customConfig.getAppSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            mac.init(new SecretKeySpec(userContext.getCustomConfig().getAppSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             byte[] signData = mac.doFinal(stringToSign.getBytes(StandardCharsets.UTF_8));
             String mySign = Base64.encode(signData);
             if (!mySign.equals(checkSign)) {

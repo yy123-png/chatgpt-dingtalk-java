@@ -7,6 +7,7 @@ import com.yy.chatgpt.dingtalk.DingTalkOperation;
 import com.yy.chatgpt.dingtalk.request.DingReceiveMsg;
 import com.yy.chatgpt.dingtalk.request.DingSendMsg;
 import com.yy.chatgpt.openai.ChatGPTOperation;
+import com.yy.chatgpt.user.UserContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -24,10 +25,12 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<FullHttpRequ
 
     private final ChatGPTOperation chatGPTOperation;
 
-    public HttpRequestHandler(DingTalkOperation dingTalkOperation,
-                              ChatGPTOperation chatGPTOperation) {
-        this.dingTalkOperation = dingTalkOperation;
-        this.chatGPTOperation = chatGPTOperation;
+    private final UserContext userContext;
+
+    public HttpRequestHandler(UserContext userContext) {
+        this.userContext = userContext;
+        this.dingTalkOperation = new DingTalkOperation(userContext);
+        this.chatGPTOperation = new ChatGPTOperation(userContext);
     }
 
 
