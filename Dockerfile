@@ -2,8 +2,6 @@ FROM openjdk:8-jdk-alpine
 
 RUN mkdir "/app"
 
-VOLUME "/app/config.json"
-
 ADD target/chatgpt-java.jar /app/chatgpt-java.jar
 
 COPY config.json /app/config.json
