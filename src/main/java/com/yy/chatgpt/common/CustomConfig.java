@@ -41,7 +41,7 @@ public class CustomConfig {
     private Integer httpProxyPort = 7890;
 
     public CustomConfig() {
-        String path = System.getProperty("user.dir") + File.separator + "config.json";
+        String path = System.getProperty("user.dir") + File.separator + "/app/config.json";
 
         StringBuilder builder = new StringBuilder();
         try (FileInputStream inputStream = new FileInputStream(path);) {

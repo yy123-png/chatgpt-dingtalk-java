@@ -4,7 +4,7 @@ RUN mkdir "/app"
 
 ADD target/chatgpt-java.jar /app/chatgpt-java.jar
 
-COPY config.json /app/config.json
+COPY app/config.json /app/config.json
 
 ENV JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=UTF8 -Duser.timezone=GMT+08"
 
