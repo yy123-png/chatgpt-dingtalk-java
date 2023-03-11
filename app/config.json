@@ -7,6 +7,7 @@
   "systemToken": "设定角色：",
   "appSecret": "",
   "sessionTimeOut": 60,
+  "useHttpProxy": true,
   "httpProxyHost": "127.0.0.1",
   "httpProxyPort": 7890
 }

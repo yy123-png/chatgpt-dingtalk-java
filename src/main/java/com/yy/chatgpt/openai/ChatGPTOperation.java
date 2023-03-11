@@ -81,15 +81,26 @@ public class ChatGPTOperation {
         chatRequest.setModel(userContext.getCustomConfig().getModel());
         chatRequest.setMessages(messages);
 
+        String postResult;
+        if (Boolean.TRUE.equals(userContext.getCustomConfig().getUseHttpProxy())) {
+            postResult = HttpUtil.createPost(CommonConstant.CHAT_API)
+                    .timeout(60 * 1000)
+                    .setHttpProxy("127.0.0.1", 7890)
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + userContext.getCustomConfig().getApiKey())
+                    .body(JSON.toJSONString(chatRequest))
+                    .execute()
+                    .body();
+        } else {
+            postResult = HttpUtil.createPost(CommonConstant.CHAT_API)
+                    .timeout(60 * 1000)
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + userContext.getCustomConfig().getApiKey())
+                    .body(JSON.toJSONString(chatRequest))
+                    .execute()
+                    .body();
+        }
 
-        String postResult = HttpUtil.createPost(CommonConstant.CHAT_API)
-                .timeout(60 * 1000)
-                .setHttpProxy("127.0.0.1", 7890)
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + userContext.getCustomConfig().getApiKey())
-                .body(JSON.toJSONString(chatRequest))
-                .execute()
-                .body();
 
         String reply = this.extractPostResult(postResult);
         ChatMessage aiContent = new ChatMessage();

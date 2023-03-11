@@ -36,6 +36,8 @@ public class CustomConfig {
     // 缓存超时时间 (秒)
     private Integer sessionTimeOut = 60;
 
+    private Boolean useHttpProxy = Boolean.FALSE;
+
     private String httpProxyHost = "127.0.0.1";
 
     private Integer httpProxyPort = 7890;
@@ -72,8 +74,10 @@ public class CustomConfig {
             this.systemToken = config.getString("systemToken") == null ? this.systemToken : config.getString("systemToken");
             this.appSecret = config.getString("appSecret") == null ? this.appSecret : config.getString("appSecret");
             this.sessionTimeOut = config.getInteger("sessionTimeOut") == null ? this.sessionTimeOut : config.getInteger("sessionTimeOut");
+            this.useHttpProxy = config.getBoolean("useHttpProxy") == null ? this.useHttpProxy : config.getBoolean("useHttpProxy");
             this.httpProxyHost = config.getString("httpProxyHost") == null ? this.httpProxyHost : config.getString("httpProxyHost");
             this.httpProxyPort = config.getInteger("httpProxyPort") == null ? this.httpProxyPort : config.getInteger("httpProxyPort");
+
         } catch (Exception e) {
             log.error("配置文件存在错误");
         }
